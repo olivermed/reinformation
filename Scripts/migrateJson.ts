@@ -4,6 +4,18 @@ import { Pool } from "pg";
 import fs from "fs";
 import { officials, professions, mandats, contact } from "Schemas";
 import { config } from "dotenv";
+import * as path from "path";
+
+function getFileNames(dirPath: string): string[] {
+  // Vérifie si le chemin existe et s'il s'agit d'un répertoire
+  if (!fs.existsSync(dirPath) || !fs.lstatSync(dirPath).isDirectory()) {
+    throw new Error(
+      "Le chemin spécifié est invalide ou n’est pas un répertoire"
+    );
+  }
+
+  return fs.readdirSync(dirPath).map((file) => path.join(dirPath, file));
+}
 
 import { downloadOfficials } from "./DownloadOfficials";
 
@@ -15,15 +27,6 @@ if (!process.env.DATABASE_URL) {
 }
 
 await downloadOfficials();
-
-const fileNames = process.argv.slice(2);
-
-if (fileNames.length === 0) {
-  console.error(
-    "Erreur : veuillez fournir au moins un fichier JSON en argument."
-  );
-  process.exit(1);
-}
 
 config({ path: ".env" });
 
@@ -96,6 +99,13 @@ async function migrateData(fileName: string) {
 }
 
 async function runMigrations() {
+  const fileNames = getFileNames("/app/DB/json/acteur/");
+  if (fileNames.length === 0) {
+    console.error(
+      "Erreur : veuillez fournir au moins un fichier JSON en argument."
+    );
+    process.exit(1);
+  }
   for (const fileName of fileNames) {
     console.log(`Traitement du fichier : ${fileName}`);
     await migrateData(fileName);
